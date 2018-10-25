@@ -1,6 +1,7 @@
 <head>
     <script src="./lib/aframe.min.js"></script>
     <script src="./lib/aframe-forcegraph-component.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v4.2.0/dist/aframe-extras.min.js"></script>
     <style>
         @font-face {
             font-family: Roboto Condensed;
@@ -12,22 +13,19 @@
         }
     </style>
     <script>
+
     lyricsResponse = undefined
     fetch('./gen/lyrics-dict.json').then((re) => {lyricsResponse = re.json()})
-        
+    // FIXME: doubtful that loader & callbacks outside of aframe component are kosher.
+
+    // window.addEventListener('mousemove', (e) => { });
+        // let graph = document.querySelector('#graph') )
+
+    ltexW = 128; ltexH = 512
     textMaterial = function(u) {
         let canvas = document.createElement('canvas'),
             cv = canvas.getContext('2d')
-        
-        canvas.width = 128; canvas.height = 512
-        cv.fillStyle = 'black'
-        cv.globalAlpha = .2
-        cv.fillRect(0,0, canvas.width,canvas.height)
-        
-        cv.font = 'Bold 20px Roboto'
-        cv.fillStyle = 'white'
-        cv.globalAlpha = 1
-        cv.textAlign = 'center'
+        canvas.width = ltexW; canvas.height = ltexH
         
         let ret = new THREE.MeshLambertMaterial({
             map: new THREE.Texture(canvas),
@@ -36,25 +34,50 @@
             depthWrite: false,
         });
         u.mat = ret // for use outside this closure
+        u.canvas = canvas
+        u.flip = false
+
+        printLyrics(cv, u)
+        return ret
+    }
+
+    printLyrics = function (cv, u) {
+        // todo: argument i in range(0, ldict[u.source.id].lyrics.length)
+        cv.setTransform(1,0,0,1,0,0)
+        cv.clearRect(0,0, ltexW,ltexH)
         
+        cv.fillStyle = 'black'
+        cv.globalAlpha = .3
+        cv.fillRect(0,0, ltexW,ltexH)
+        
+        cv.font = 'Bold 30px Roboto Condensed' // FIXME: wait for font to load
+        cv.fillStyle = 'white'
+        cv.globalAlpha = 1
+        cv.textAlign = 'center'
+
         lyricsResponse.then((ldict) => {
             // let v = lyrics.find(v => v.id == u.source.id) // not assuming sort
-            let v = ldict[u.source.id]
-            u.lyrics = v.lyrics
+            let v = u.flip ? ldict[u.target.id] : ldict[u.source.id],
+                w = u.flip ? ldict[u.source.id] : ldict[u.target.id]
             
-            let i = Math.floor(Math.random() * (v.lyrics.length - 2))
-            let set = v.lyrics.slice(i, i+6)
+            let i = Math.floor(Math.random() * (v.lyrics.length - 3)),
+                j = Math.floor(Math.random() * (w.lyrics.length - 3))
+            let set = [].concat( // fails gracefully for '[instrumental]'
+                    v.lyrics.slice(i, i+3),
+                    w.lyrics.slice(j, j+3)
+                    )
+            u.lyrics = set // save for blotting
             
-            cv.translate(canvas.width/2, canvas.height/2)
+            cv.translate(ltexW/2, ltexH/2)
             cv.rotate(-Math.PI/2)
-            set.forEach((s,i) => cv.fillText(s, 0, -48 + 18*i))
+            set.forEach((s,i) => cv.fillText(s, 0, -48 + 26*i))
             
-            ret.map.needsUpdate = true
+            u.mat.map.needsUpdate = true
+            u.flip = !u.flip
             
             // yes, Promise resolution can monkey-patch returned Material
             // ret.color = new THREE.Color(u.source.id/150, 0, u.target.id/150)
         })
-        return ret
     }
     
     colorByYear = function(u) {
@@ -73,10 +96,14 @@
         if (u_) u_.mat.opacity = 0.5
         if (u) u.mat.opacity = 1
         
-        if (u_ && !u) {
-            let poem = document.getElementById('poem')
-            let v = u_
-            
+        if (u && !u_) { // (initial) enter
+        }
+
+        if (u_) { // exit
+            let v = u_,
+                cv = v.canvas.getContext('2d')
+            printLyrics(cv, v)
+
             let i = scroll[v.source.song]
             if (i === undefined)
                 scroll[v.source.song] = i = Math.floor(Math.random() * v.lyrics.length)
@@ -87,20 +114,21 @@
             
             let odds = (s) => 9 / (10 + s.length)
             
-            let k = 0
+            let k = 0, ret = []
             while (k < 2 && i+k < v.lyrics.length) {
                 let s = v.lyrics[i+k].split(' '),
-                    ret = s.map(w => Math.random() < odds(s) ? w : '').join(' ')
+                    res = s.map(w => Math.random() < odds(s) ? w : '').join(' ')
                         // '_'.repeat(w.length) // prefer to not preserve length info
-                
-                console.log(ret != 'Instrumental' ? ret : '')
-                poem.value += ret + '<br/>\n' // FIXME: A-frame entities are not like DOM nodes.
+
+                if (res != 'Instrumental') {
+                    console.log(res)
+                    ret.push(res)
+                }
+                else console.log()
                 k += 1
-            }
-            
+            }            
             scroll[v.source.song] += k
-        }
-        
+        }        
         // scratch - in vr space...
         // cv.requestAnimationFrame()
         // mat.map.needsUpdate = true
@@ -109,11 +137,12 @@
 </head>
   <body>      
     <a-scene states=false>
-      <a-camera wasd-controls="fly: true; acceleration: 600">
-        <a-cursor color="lavender" opacity="0.5"></a-cursor>  
-        <a-text id="poem" width="0.5" opacity="0.5" value="poem" align="center"></a-text>
-      </a-camera>
+        <a-entity id="rig" movement-controls="fly: true; speed: 5.0" position="0 0 0">
+            <a-camera position="0 1.6 0" look-controls>
+                <a-cursor color="lavender" opacity="0.5"></a-cursor> 
+            </a-camera>
+        </a-entity>
       <a-sky color="#002"></a-sky>
 
-      <a-entity forcegraph="json-url: gen/thumbprint-graph.json; node-label: song; node-desc: artist; node-color: colorByYear; node-val: weight; node-rel-size: 4; node-opacity: .5; link-width: 15; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 5000;"></a-entity>
+      <a-entity id="graph" forcegraph="json-url: gen/thumbprint-graph.json; node-label: song; node-desc: artist; node-color: colorByYear; node-val: weight; node-rel-size: 4; node-opacity: .5; link-width: 15; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 10000;"></a-entity>
     </a-scene>
