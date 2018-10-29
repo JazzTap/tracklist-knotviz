@@ -1,7 +1,10 @@
 <head>
     <script src="./lib/aframe.min.js"></script>
     <script src="./lib/aframe-forcegraph-component.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v4.2.0/dist/aframe-extras.min.js"></script>
+    <!-- <script src="./lib/aframe-extras.min.js"></script> -->
+    <script src="./lib/aframe-orbit-controls.min.js"></script>
+    
+    <!-- fixme: font polyfills don't land in time for texture init -->
     <style>
         @font-face {
             font-family: Roboto Condensed;
@@ -18,9 +21,72 @@
     fetch('./gen/lyrics-dict.json').then((re) => {lyricsResponse = re.json()})
     // FIXME: doubtful that loader & callbacks outside of aframe component are kosher.
 
-    // window.addEventListener('mousemove', (e) => { });
-        // let graph = document.querySelector('#graph') )
+    songQuery = ''
+    window.addEventListener('keydown', (e) => {
+        // todo: with scroll listener, fix 'screenspace' text for orbitcontrols camera
+        // document.querySelector('a-entity[camera]')
+        
+        if ('abcdefghijklmnopqrstuvwxyz'.includes(e.key))
+            console.log(songQuery += e.key)
+        else if (e.key == 'Backspace')
+            console.log(songQuery = songQuery.slice(0, -1))
+        else if (e.key == 'Enter')
+            console.log(songQuery = '')
+        
+        lyricsResponse.then((ldict) => {
+            ldict.forEach(d => {
+                let i = d.id
+                if (!innerMats[i] || !outerMats[i])
+                    return // guard against lyrics with no node
+                    
+                if (songQuery.length == 0) {
+                    innerMats[i].color.setHex(unfocus)
+                    outerMats[i].color.setHex(unfocus)
+                }
+                else {
+                    innerMats[i].color.setHex( d.song.toLowerCase().includes(songQuery) ? colors[i] : unfocus)
+                    outerMats[i].color.setHex( d.artist.toLowerCase().includes(songQuery) ? colors[i] : unfocus)
+                }
+            })
+        })
+    });
+    
+    // TODO: highlight by song query. outline by artist, fill by song.
+    innerMats = []
+    outerMats = []
+    selectorSphere = function(u) {
+        colors[u.id] = colorMap(u)
+        
+        let geometry = new THREE.SphereGeometry( u.weight * .25, 32, 32 ),
+            material = new THREE.MeshLambertMaterial( {color: unfocus,
+                                                       transparent: true, opacity: 0.8} ),
+            outline = new THREE.MeshBasicMaterial( {color: unfocus, side: THREE.BackSide,
+                                                    transparent: true, opacity: 0.8})
+        
+        innerMats[u.id] = material // FIXME: extend the forcegraph instead of just sinking my pointers in, kudzu-like
+        outerMats[u.id] = outline
+        
+        let res = new THREE.Mesh( geometry, outline ),
+            ret = new THREE.Group()
+        res.scale.multiplyScalar(1.1) // https://stemkoski.github.io/Three.js/Outline.html
+        
+        ret.add(new THREE.Mesh( geometry, material ))
+        ret.add(res)
+        return ret;
+    }
+    
+    colors = []
+    unfocus = 0xaaaaaa
+    colorMap = function(u) {
+        let h = parseInt(u.year) - 1985, b = 70
+        if (isNaN(h)) {h = 0; b = 100} // fallback
+        h *= 8
+        
+        let s = 'hsl(' + [h, '90%', b + '%'].join(',') + ')'
+        return new THREE.Color(s).getHex()
+    }
 
+    // lyrics in 3d scene
     ltexW = 128; ltexH = 512
     textMaterial = function(u) {
         let canvas = document.createElement('canvas'),
@@ -30,7 +96,7 @@
         let ret = new THREE.MeshLambertMaterial({
             map: new THREE.Texture(canvas),
             transparent: true,
-            opacity: 0.5,
+            opacity: 0.7,
             depthWrite: false,
         });
         u.mat = ret // for use outside this closure
@@ -41,59 +107,71 @@
         return ret
     }
 
-    printLyrics = function (cv, u) {
+    printLyrics = function (cv, link) {
         // todo: argument i in range(0, ldict[u.source.id].lyrics.length)
+        // if (link.fake) return // fake links each get their own invisible texture
+
         cv.setTransform(1,0,0,1,0,0)
         cv.clearRect(0,0, ltexW,ltexH)
         
         cv.fillStyle = 'black'
-        cv.globalAlpha = .3
+        cv.globalAlpha = .2
         cv.fillRect(0,0, ltexW,ltexH)
         
-        cv.font = 'Bold 30px Roboto Condensed' // FIXME: wait for font to load
+        cv.font = 'Bold 20px Roboto Condensed' // FIXME: wait for font to load
         cv.fillStyle = 'white'
         cv.globalAlpha = 1
-        cv.textAlign = 'center'
+        // cv.textAlign = 'center'
 
         lyricsResponse.then((ldict) => {
             // let v = lyrics.find(v => v.id == u.source.id) // not assuming sort
-            let v = u.flip ? ldict[u.target.id] : ldict[u.source.id],
-                w = u.flip ? ldict[u.source.id] : ldict[u.target.id]
+            let u = link.flip ? ldict[link.target.id] : ldict[link.source.id],
+                v = link.flip ? ldict[link.source.id] : ldict[link.target.id]
             
-            let i = Math.floor(Math.random() * (v.lyrics.length - 3)),
-                j = Math.floor(Math.random() * (w.lyrics.length - 3))
+            let i = Math.floor(Math.random() * (u.lyrics.length - 3)),
+                j = Math.floor(Math.random() * (v.lyrics.length - 3))
             let set = [].concat( // fails gracefully for '[instrumental]'
-                    v.lyrics.slice(i, i+3),
-                    w.lyrics.slice(j, j+3)
+                    u.lyrics.slice(i, i+3),
+                    v.lyrics.slice(j, j+3)
                     )
-            u.lyrics = set // save for blotting
+            link.lyrics = set // save for blotting
             
             cv.translate(ltexW/2, ltexH/2)
             cv.rotate(-Math.PI/2)
-            set.forEach((s,i) => cv.fillText(s, 0, -48 + 26*i))
+            set.forEach((s,k) => {
+                let x = -ltexW/2, y = -48 + 20*k
+                // cv.fillText(s, 0, y)
+                
+                s.split(' ').forEach(w => {
+                    if (w == 'Instrumental')
+                        cv.fillText(k < 3 ? u.song : v.song, x, y); // BRITTLE to 'set'
+                    else {
+                        cv.fillStyle =
+                            ['go', 'bring', 'through', 'away', 'inside', 'travel', 'world', 'dreams', 'keep', 'carry', 'turn', 'hidden', 'place', 'down', 'among', 'transition']
+                            .includes(w.toLowerCase()) ? 'aquamarine' : 
+                            // sight
+                            ['time', 'ending', 'strike', 'suddenly', 'born', 'moon', 'now', 'never', 'fade', 'survive', 'obsolete', 'disappear', 'vanished', 'seconds', 'slows']
+                            .includes(w.toLowerCase()) ? 'salmon' :
+                            // speech
+                            'white';
+                        cv.fillText(w, x, y);
+                        x += cv.measureText(w + ' ').width; // https://stackoverflow.com/a/7665485
+                    }
+                })
+            })
             
-            u.mat.map.needsUpdate = true
-            u.flip = !u.flip
+            link.mat.map.needsUpdate = true
+            link.flip = !link.flip
             
             // yes, Promise resolution can monkey-patch returned Material
             // ret.color = new THREE.Color(u.source.id/150, 0, u.target.id/150)
         })
     }
     
-    colorByYear = function(u) {
-        let h = parseInt(u.year) - 1980,
-            b = 70
-        
-        if (isNaN(h)) {h = 0; b = 100}
-        h *= 8
-        
-        let s = 'hsl(' + [h, '65%', b + '%'].join(',') + ')'
-        return new THREE.Color(s).getHex()
-    }
-    
+    // lyrics to console
     let scroll = {}
     blotLyrics = function(u, u_) {
-        if (u_) u_.mat.opacity = 0.5
+        if (u_) u_.mat.opacity = 0.7
         if (u) u.mat.opacity = 1
         
         if (u && !u_) { // (initial) enter
@@ -103,14 +181,13 @@
             let v = u_,
                 cv = v.canvas.getContext('2d')
             printLyrics(cv, v)
+            if (!v.lyrics) return
 
             let i = scroll[v.source.song]
             if (i === undefined)
                 scroll[v.source.song] = i = Math.floor(Math.random() * v.lyrics.length)
             if (i >= v.lyrics.length)
                 scroll[v.source.song] = i = 0
-            if (v.lyrics.length == 0)
-                return
             
             let odds = (s) => 9 / (10 + s.length)
             
@@ -135,14 +212,12 @@
     }
     </script>
 </head>
-  <body>      
-    <a-scene states=false>
-        <a-entity id="rig" movement-controls="fly: true; speed: 5.0" position="0 0 0">
-            <a-camera position="0 1.6 0" look-controls>
-                <a-cursor color="lavender" opacity="0.5"></a-cursor> 
-            </a-camera>
-        </a-entity>
-      <a-sky color="#002"></a-sky>
+<body>
+    <a-scene states=false keyboard-shortcuts="enterVR: false">
+    <a-entity camera look-controls orbit-controls="target: 0 1.6 0; minDistance: 15; maxDistance: 580; keyPanSpeed: 50; zoomSpeed: 2.5; initialPosition: 0 5 15"> </a-entity>
+        <a-sky color="#222"></a-sky>
 
-      <a-entity id="graph" forcegraph="json-url: gen/thumbprint-graph.json; node-label: song; node-desc: artist; node-color: colorByYear; node-val: weight; node-rel-size: 4; node-opacity: .5; link-width: 15; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 10000;"></a-entity>
+    <a-entity id="graph" forcegraph="json-url: gen/thumbprint-graph.json; node-label: song; node-desc: artist; node-three-object: selectorSphere; link-width: 10; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 50000;"></a-entity>
+        <!-- node-val: weight; node-rel-size: 4; node-opacity: .75;  -->
     </a-scene>
+</body>
