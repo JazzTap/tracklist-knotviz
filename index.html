@@ -22,6 +22,7 @@
     // FIXME: doubtful that loader & callbacks outside of aframe component are kosher.
 
     songQuery = ''
+    mute = true
     window.addEventListener('keydown', (e) => {
         // todo: with scroll listener, fix 'screenspace' text for orbitcontrols camera
         // document.querySelector('a-entity[camera]')
@@ -32,6 +33,8 @@
             console.log(songQuery = songQuery.slice(0, -1))
         else if (e.key == 'Enter')
             console.log(songQuery = '')
+        else if (e.key == ' ')
+            mute = !mute
         
         lyricsResponse.then((ldict) => {
             ldict.forEach(d => {
@@ -39,13 +42,14 @@
                 if (!innerMats[i] || !outerMats[i])
                     return // guard against lyrics with no node
                     
-                if (songQuery.length == 0) {
+                if (mute && songQuery.length == 0) {
                     innerMats[i].color.setHex(unfocus)
                     outerMats[i].color.setHex(unfocus)
                 }
                 else {
-                    innerMats[i].color.setHex( d.song.toLowerCase().includes(songQuery) ? colors[i] : unfocus)
-                    outerMats[i].color.setHex( d.artist.toLowerCase().includes(songQuery) ? colors[i] : unfocus)
+                    innerMats[i].color.setHex( d.lyrics.join('\n').toLowerCase().includes(songQuery) ? colors[i] : unfocus)
+                    outerMats[i].color.setHex( d.artist.toLowerCase().slice(0, songQuery.length) == songQuery ||
+                                               d.song.toLowerCase().split(' ').some(s => s.slice(0, songQuery.length) == songQuery) ? colors[i] : unfocus)
                 }
             })
         })
@@ -87,7 +91,7 @@
     }
 
     // lyrics in 3d scene
-    ltexW = 128; ltexH = 512
+    ltexW = 256; ltexH = 1024
     textMaterial = function(u) {
         let canvas = document.createElement('canvas'),
             cv = canvas.getContext('2d')
@@ -118,7 +122,7 @@
         cv.globalAlpha = .2
         cv.fillRect(0,0, ltexW,ltexH)
         
-        cv.font = 'Bold 20px Roboto Condensed' // FIXME: wait for font to load
+        cv.font = 'Bold 42px Sans' // FIXME: wait for font to load
         cv.fillStyle = 'white'
         cv.globalAlpha = 1
         // cv.textAlign = 'center'
@@ -139,20 +143,27 @@
             cv.translate(ltexW/2, ltexH/2)
             cv.rotate(-Math.PI/2)
             set.forEach((s,k) => {
-                let x = -ltexW/2, y = -48 + 20*k
+                let x = -cv.measureText(s).width/2, // center, because spheres vary in size
+                    y = -100 + 42*k
                 // cv.fillText(s, 0, y)
                 
                 s.split(' ').forEach(w => {
-                    if (w == 'Instrumental')
+                    if (w == 'Instrumental') {
+                        cv.fillStyle = 'lightblue'
                         cv.fillText(k < 3 ? u.song : v.song, x, y); // BRITTLE to 'set'
+                    }
                     else {
+                        let kw = w.toLowerCase()
                         cv.fillStyle =
-                            ['go', 'bring', 'through', 'away', 'inside', 'travel', 'world', 'dreams', 'keep', 'carry', 'turn', 'hidden', 'place', 'down', 'among', 'transition']
-                            .includes(w.toLowerCase()) ? 'aquamarine' : 
-                            // sight
-                            ['time', 'ending', 'strike', 'suddenly', 'born', 'moon', 'now', 'never', 'fade', 'survive', 'obsolete', 'disappear', 'vanished', 'seconds', 'slows']
-                            .includes(w.toLowerCase()) ? 'salmon' :
-                            // speech
+                            ['go', 'going', 'bring', 'through', 'away', 'inside', 'travel', 'world', 'dreams', 'keep', 'carry', 'turn', 'hidden', 'down', 'among', 'transition', 'on', 'take', 'taking', 'confined', 'calling', 'leave', 'rushing']
+                            .includes(kw) ? 'aquamarine' : 
+                            ['see', 'close', 'filling', 'taste', 'radio', 'darkness', 'black', 'know', 'knows', 'show', 'head', 'cranial', 'dark']
+                            .includes(kw) ? 'palevioletred' :
+
+                            ['heal', 'ending', 'suddenly', 'born', 'moon', 'now', 'never', 'fade', 'survive', 'obsolete', 'disappear', 'vanished', 'seconds', 'slows', 'now', 'sleep', 'chance', 'year', 'old']
+                            .includes(kw) ? 'salmon' :
+                            ['news', 'wondering', 'heard', 'thought', 'use', 'ease', 'said', 'fight', 'call', 'whispered', 'strike']
+                            .includes(kw) ? 'peachpuff' :
                             'white';
                         cv.fillText(w, x, y);
                         x += cv.measureText(w + ' ').width; // https://stackoverflow.com/a/7665485
