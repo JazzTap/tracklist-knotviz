@@ -1,10 +1,14 @@
 <head>
     <script src="./lib/aframe.min.js"></script>
     <script src="./lib/aframe-forcegraph-component.min.js"></script>
+
     <!-- <script src="./lib/aframe-extras.min.js"></script> -->
+    <!-- <script src="https://unpkg.com/aframe-teleport-controls/dist/aframe-teleport-controls.min.js"></script> -->
     <script src="./lib/aframe-orbit-controls.min.js"></script>
+
     <script src="https://unpkg.com/three.texttexture"></script>
     <script src="https://unpkg.com/three.textsprite"></script>
+    <!-- <script src="https://cdn.rawgit.com/tizzle/aframe-sprite-component/master/dist/aframe-sprite-component.min.js"></script> -->
     
     <!-- fixme: font polyfills don't land in time for texture init -->
     <style>
@@ -34,7 +38,12 @@
     mute = true
     window.addEventListener('keydown', (e) => {
         // todo: with scroll listener, fix 'screenspace' text for orbitcontrols camera
-        // document.querySelector('a-entity[camera]')
+        //       or at least, port textsprite to aframe sprites (that show up for both eyes)
+        
+        /* step = 5 // patching navigation back in for VR headset - not performant nor functional
+        doMove = {'ArrowDown': tar => tar.z += step, 'ArrowUp': tar => tar.z -= step,
+              'ArrowRight': tar => tar.x += step, 'ArrowLeft': tar => tar.x -= step,
+              'PageUp': tar => tar.y += step, 'PageDown': tar => tar.y -= step,} */
         
         if ('abcdefghijklmnopqrstuvwxyz '.includes(e.key))
             console.log(songQuery += e.key)
@@ -42,8 +51,16 @@
             console.log(songQuery = songQuery.slice(0, -1))
         else if (e.key == 'Enter')
             console.log(songQuery = '')
-        else if (e.key == 'Tab')
+
+        if (e.key == 'Tab')
             mute = !mute
+        /* else if (doMove.hasOwnProperty(e.key)) {
+            let cam = document.querySelector('a-entity[camera]')
+
+            console.log(cam.getAttribute('rotation'))
+            let xyz = cam.getAttribute('position') // orbit-controls doesn't listen for updates
+            doMove[e.key](xyz)
+        } */
         
         lyricsResponse.then((ldict) => {
             ldict.forEach(d => {
@@ -59,7 +76,8 @@
                     let frontMatch = s => s.slice(0, songQuery.length) == songQuery
 
                     let inLyrics = d.lyrics.join('\n').toLowerCase().includes(songQuery),
-                        inTitle = d.artist.toLowerCase().split(' ').some(frontMatch) ||                  d.song.toLowerCase().split(' ').some(frontMatch)
+                        inTitle = d.artist.toLowerCase().split(' ').some(frontMatch) ||
+                                  d.song.toLowerCase().split(' ').some(frontMatch)
 
                     innerMats[i].color.setHex( inLyrics ? colors[i] : unfocus)
                     outerMats[i].color.setHex( inTitle ? colors[i] : unfocus)
@@ -249,10 +267,9 @@
                 <a-cursor color="lavender" opacity="0.5"></a-cursor> 
             </a-camera>
         </a-entity> -->
-        <a-entity windows-motion-controls="hand: left"></a-entity>
-        <a-entity windows-motion-controls="hand: right"></a-entity>
+        <!-- <a-entity windows-motion-controls="hand: right" teleport-controls></a-entity> -->
 
-        <a-entity camera rotation-reader look-controls orbit-controls="target: 0 1.6 0; minDistance: 15; maxDistance: 580; keyPanSpeed: 50; zoomSpeed: 2.5; initialPosition: 0 5 15"> </a-entity>
+        <a-entity camera rotation-reader look-controls orbit-controls="target: 0 1.6 0; minDistance: 15; maxDistance: 580; keyPanSpeed: 50; zoomSpeed: 2.5; initialPosition: 0 5 15;"> </a-entity>
         <a-sky color="#222"></a-sky>
 
         <a-entity id="graph" forcegraph="json-url: gen/thumbprint-graph.json; node-label: song; node-desc: artist; node-three-object: selectorSphere; link-width: 10; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 50000;"></a-entity>
