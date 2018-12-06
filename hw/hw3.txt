@@ -1,0 +1,27 @@
+munzner readings
+
+ch2
+
+can anybody actually grok tensors from a forest of ellipses?
+    high-dimensional shapes would be nice - lots of corners, many kinds of adjacency -
+
+    but dot products (and crossproducts) are more likely to yield decent 'similarity'
+        is 2d graph embedding w/ link strength 'faithful'? 3d?
+
+ch3
+
+enjoyment is for casual engagement!
+    what?
+
+    true, obviously. but not only.
+
+ch5
+
+control for channel's stimulus intensity in choosing scale of bound axis
+    application for logscale stuff
+
+    removing information, e.g. binning, creates distinctions
+    (which may even be true - try a logscale)
+
+adjacency effects on color are intricate
+

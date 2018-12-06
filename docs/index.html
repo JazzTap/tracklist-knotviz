@@ -1,15 +1,14 @@
 <head>
-    <script src="./lib/aframe.min.js"></script>
-    <script src="./lib/aframe-forcegraph-component.min.js"></script>
-    <script src="./lib/aframe-orbit-controls.min.js"></script>
-
+    <script src="https://aframe.io/releases/0.8.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/vasturiano/aframe-forcegraph-component/dist/aframe-forcegraph-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-orbit-controls@1.2.0/dist/aframe-orbit-controls.min.js"></script>
     <script src="https://unpkg.com/three.texttexture"></script>
     <script src="https://unpkg.com/three.textsprite"></script>
     <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Condensed" rel="stylesheet">
 
     <script>
     lyricsResponse = undefined
-    fetch('./gen/lyrics-dict.json').then((re) => {lyricsResponse = re.json()})
+    fetch('https://api.myjson.com/bins/xqpw6').then((re) => {lyricsResponse = re.json()})
     // FIXME: doubtful that loader & callbacks outside of aframe component are kosher.
 
     /* AFRAME.registerComponent('rotation-reader', {
@@ -25,32 +24,14 @@
         // todo: with scroll listener, fix 'screenspace' text for orbitcontrols camera
         // document.querySelector('a-entity[camera]')
         
-        /* step = 5 // patching navigation back in for VR headset
-        doMove = {'ArrowDown': tar => tar.z += step, 'ArrowUp': tar => tar.z -= step,
-              'ArrowRight': tar => tar.x += step, 'ArrowLeft': tar => tar.x -= step,
-              'PageUp': tar => tar.y += step, 'PageDown': tar => tar.y -= step,} */
-        
-        if ('abcdefghijklmnopqrstuvwxyz'.includes(e.key))
+        if ('abcdefghijklmnopqrstuvwxyz '.includes(e.key))
             console.log(songQuery += e.key)
         else if (e.key == 'Backspace')
             console.log(songQuery = songQuery.slice(0, -1))
         else if (e.key == 'Enter')
             console.log(songQuery = '')
-
-        if (e.key == 'Tab')
+        else if (e.key == 'Tab')
             mute = !mute
-        else if (e.key == ' ') {
-            let rig = document.querySelector('#rig')
-            rig.setAttribute('position', {x: Math.random()*100-50,
-                y: Math.random()*100-50, z: Math.random()*100-50})
-        }
-        /* else if (doMove.hasOwnProperty(e.key)) {
-            let cam = document.querySelector('a-entity[camera]')
-
-            console.log(cam.getAttribute('rotation'))
-            let xyz = cam.getAttribute('position') // orbit-controls doesn't listen for updates
-            doMove[e.key](xyz)
-        } */
         
         lyricsResponse.then((ldict) => {
             ldict.forEach(d => {
@@ -263,7 +244,7 @@
         </a-entity>
         <a-sky color="#222"></a-sky>
 
-        <a-entity id="graph" forcegraph="json-url: gen/thumbprint-graph.json; node-label: song; node-desc: artist; node-three-object: selectorSphere; link-width: 10; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 50000;"></a-entity>
+        <a-entity id="graph" forcegraph="json-url: https://gist.githubusercontent.com/JazzTap/bbd671712d6fe5921ee7db03cc4867d6/raw/ce861dbdc2deaa824957e26f2a8ef703ffe6f4d8/thumbprint-graph.json; node-label: song; node-desc: artist; node-three-object: selectorSphere; link-width: 10; link-material: textMaterial; link-resolution: 32; on-link-center-hover: blotLyrics; warmup-ticks: 100; cooldown-ticks: 50000;"></a-entity>
         <!-- node-val: weight; node-rel-size: 4; node-opacity: .75;  -->
     </a-scene>
 </body>

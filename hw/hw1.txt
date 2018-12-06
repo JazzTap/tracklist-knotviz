@@ -1,0 +1,15 @@
+immersion
+
+Finding character leitmotifs in my slightly randomized playlists. E.g. while playing a 200-hour RPG with direct movement and swooshy cloaks and characters situated in their political worlds, or while arranging scenes of the same (up to textual fidelity) in my head.
+
+Loggerheads not requiring unusual stubbornness or unprecedented foolishness are good. Relationships may progress through other milestones. Assonance with some minimal NPC AI or other kind of persistence is important.
+
+
+(Representing domain-specific rich input works, too. Verifying an interesting algorithm is not unlike verifying an amusing arrangement of stakes.)
+
+
+analysis
+
+Bolting together a character sheet, especially by consulting reams of items, or trying to simulate blast radii and synergies. Arranging existing items together. Constructing a piece that finishes a set.
+
+Wish that writing broke down like data pipelines do, eventually. Writing for the absent interpreter goes badly. I can't work without any feedback loop. I'll learn from examples, and extract the minimal representation.
