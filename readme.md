@@ -2,7 +2,9 @@
 
 Or, 'why does Pandora keep playing me these songs in clumps?'
 
-`docs` hosts a web version of the application + my other class materials, excepting active research data. (i.e. Project 2, which I've put on the Overleaf documenting it.)
+![](docs/screenshot.png)
+
+`docs` hosts a [web version](https://jazztap.github.io/tracklist-knotviz/) of the application + my other class materials, excepting active research data. (I've put Project 2 on the Overleaf documenting it.)
 
 Please reload if the nodes got jumbled on top of each other. Your browser will have cached the tracklist topology & be able to figure it out next time.
 
