@@ -8,6 +8,11 @@ Or, 'why does Pandora keep playing me these songs in clumps?'
 
 Please reload if the nodes got jumbled on top of each other. Your browser will have cached the tracklist topology & be able to figure it out next time.
 
+Built with A-Frame, Canvas, and:  
+@vasuriano/aframe-forcegraph-component  
+@ngokevin/aframe-orbit-controls (which interferes with the above's HUD, but lets you hold the space in your hands)  
+@johnwmillr/LyricsGenius (super easy to use!)
+
 ## Navigation
 
 Look away from edges to flip the order of splicing of three-line excerpts of the connected nodes' lyrics. Type search terms (alphabetical + spaces) to highlight nodes. Reset by hitting 'enter'.
